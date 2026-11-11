@@ -712,6 +712,7 @@ def main() -> int:
 
     # A tiny .nojekyll so GitHub Pages does not run Jekyll on docs/
     (out / ".nojekyll").write_text("", encoding="utf-8")
+    (out / "CNAME").write_text("joehartmann.com\n", encoding="utf-8")
 
     print(f"Built {len(built)} article(s), {len(boards)} board page(s) → {out}")
     if missing:
