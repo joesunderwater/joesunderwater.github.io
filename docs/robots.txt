@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://joesunderwater.github.io/sitemap.xml

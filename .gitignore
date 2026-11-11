@@ -1,0 +1,21 @@
+# Local QA screenshots (not part of the public site)
+screenshots/
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Generated briefing for new-pin batches (recreated by list_new_pins.py)
+build/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
