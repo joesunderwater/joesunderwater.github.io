@@ -449,6 +449,7 @@ def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=No
   <meta property="og:type" content="{html.escape(og_type)}">
   <meta property="og:site_name" content="{site}">
   <meta name="p:domain_verify" content="089ed43513335d03e342307af543eb71"/>
+  <meta name="msvalidate.01" content="23C068D052CA8398C7D55FD934FC69B6"/>
   <meta property="og:title" content="{og_title}">
   <meta property="og:description" content="{og_desc}">
   <meta property="og:url" content="{html.escape(canonical)}">
