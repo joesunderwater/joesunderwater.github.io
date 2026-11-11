@@ -468,6 +468,7 @@ def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=No
   <link rel="stylesheet" href="{css}">
   {extra_head}
   {jsonld_html}
+  <script data-goatcounter="https://joehartmannfinds.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -865,7 +866,7 @@ def render_disclosure(cfg, same_as):
       <h2>Photos</h2>
       <p>Lifestyle images used on article pages are mood and styling photos. They are not photographs of the products being discussed. Product appearance, color, and details should be confirmed on the Amazon listing.</p>
       <h2>Privacy</h2>
-      <p>This is a static website. We do not run a member account system, and we do not ask you to submit a name, email address, or payment details on this site. We do not set first-party analytics cookies from this repository’s own code. If you follow a link to Amazon, Pinterest, or another third-party site, that site may collect data under its own privacy policy. If this site is later served through a host or CDN that logs basic request data (such as IP address and browser type), those logs are controlled by the host, not stored in this project.</p>
+      <p>This is a static website. We do not run a member account system, and we do not ask you to submit a name, email address, or payment details on this site. We use GoatCounter, a privacy-friendly analytics service, to count page views. It does not use cookies or collect personal data, and it does not track you across other websites. If you follow a link to Amazon, Pinterest, or another third-party site, that site may collect data under its own privacy policy. If this site is later served through a host or CDN that logs basic request data (such as IP address and browser type), those logs are controlled by the host, not stored in this project.</p>
       <p>If a future version of the site adds a newsletter, comments, or other forms, this page will be updated to describe what is collected and why.</p>
       <h2>Accuracy</h2>
       <p>Product features in the articles are based on publicly listed product information at the time of writing. Listings can change. We do not invent specifications, ratings, reviews, or testimonials, and we do not guarantee that a product will meet your needs. Check the live Amazon page for the latest details.</p>
