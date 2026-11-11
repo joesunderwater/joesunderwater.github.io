@@ -28,7 +28,7 @@ fi
 MSG="${1:-}"
 if [[ -z "$MSG" ]]; then
   DATE=$(date +%F)
-  MSG="Update Fave Finds site (${DATE})"
+  MSG="Update Joe Hartmann Finds site (${DATE})"
 fi
 
 git commit -m "$MSG"

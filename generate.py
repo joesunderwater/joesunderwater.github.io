@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fave Finds static site generator.
+"""Joe Hartmann Finds static site generator.
 
 Reads pin metadata from pins.json and article prose from content/<id>.md,
 then writes a complete static site into docs/ (GitHub Pages friendly).
@@ -275,7 +275,7 @@ def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=No
   <a class="skip" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="wordmark" href="{home}">{html.escape(cfg['site_name'].split()[0])} <span>{html.escape(' '.join(cfg['site_name'].split()[1:]) or 'Finds')}</span></a>
+      <a class="wordmark" href="{home}">{html.escape(cfg['site_name'].rsplit(' ', 1)[0] if ' ' in cfg['site_name'] else cfg['site_name'])}{(' <span>' + html.escape(cfg['site_name'].rsplit(' ', 1)[1]) + '</span>') if ' ' in cfg['site_name'] else ''}</a>
       <nav class="nav" aria-label="Primary">
         <a href="{home}">Latest</a>
         <a href="{about}">About</a>
@@ -637,10 +637,11 @@ def write_rss(cfg, arts, dest: Path):
 
 
 def write_favicon(dest: Path, name: str):
+    letter = html.escape((name or "J")[0].upper())
     dest.write_text(
-        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+        f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="14" fill="#b44528"/>
-  <text x="32" y="44" text-anchor="middle" font-size="36" font-family="Georgia, serif" fill="#fffcf7">F</text>
+  <text x="32" y="44" text-anchor="middle" font-size="36" font-family="Georgia, serif" fill="#fffcf7">{letter}</text>
 </svg>
 """,
         encoding="utf-8",

@@ -1,8 +1,8 @@
-# Fave Finds
+# Joe Hartmann Finds
 
 A static affiliate storefront for Pinterest pins and their Amazon finds.
 
-**Site name:** Fave Finds (change this in one place: `config.json` → `site_name`, plus `tagline` and `description` if you want).
+**Site name:** Joe Hartmann Finds (change this in one place: `config.json` → `site_name`, plus `tagline` and `description` if you want).
 
 The live site is a [GitHub Pages](https://pages.github.com/) user site:
 
