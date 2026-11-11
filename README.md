@@ -6,7 +6,7 @@ A static affiliate storefront for Pinterest pins and their Amazon finds.
 
 The live site is a [GitHub Pages](https://pages.github.com/) user site:
 
-- Site: https://joesunderwater.github.io/
+- Site: https://joehartmann.com/
 - Repo: https://github.com/joesunderwater/joesunderwater.github.io
 
 Pages is served from the `docs/` folder on the `main` branch. `docs/.nojekyll` is committed so GitHub does not run Jekyll on the output.
@@ -37,8 +37,9 @@ affiliate-site/
     boards/<board-slug>/   # one category page per Pinterest board
     articles/<slug>/       # one article page per pin
     images/                # compressed webp + jpeg copies of lifestyle photos
-    css/  favicon.svg
+    css/  favicon.svg  favicon-192.png
     sitemap.xml  robots.txt  feed.xml
+    <indexnow-key>.txt        # IndexNow key file (from config.json)
   screenshots/             # local QA screenshots, not part of the public nav
   build/new-pins.json      # briefing file for the next article-writing batch
 ```
@@ -50,7 +51,10 @@ Pin source data (not in this folder): `/workspace/affiliate/pins.json`, with ima
 In `config.json`:
 
 - `site_name`, `tagline`, `description` — branding
-- `base_url` — live site origin, `https://joesunderwater.github.io` (used for canonical, sitemap, RSS, and Open Graph URLs).
+- `base_url` — live site origin, `https://joehartmann.com` (used for canonical, sitemap, RSS, and Open Graph URLs).
+- `home_title` — the homepage `<title>` and Open Graph title.
+- `pinterest_profile` — the public Pinterest profile URL used in Organization `sameAs` markup. If omitted, the generator derives it from a pin `board_url`.
+- `indexnow_key` — public IndexNow key. The build writes `docs/<key>.txt`, and `publish.sh` pings IndexNow with changed page URLs after a successful push.
 - `base_path` — leave `""`. This is a user site at the domain root. Only set a path like `"/repo"` if you ever move it to a project site.
 - `pins_json` — path to Dave’s pin file
 - `output_dir` — `docs` (GitHub Pages can serve the `/docs` folder on the default branch; `.nojekyll` is written automatically)
@@ -117,7 +121,7 @@ python3 -m http.server --directory docs 8765
 
 ### 4. Publish to GitHub Pages
 
-`./publish.sh` runs `git add -A && git commit && git push` **only if something changed**. It does not rebuild; run `./update.sh` first. You can pass a commit message:
+`./publish.sh` runs `git add -A && git commit`, then `git pull --rebase origin main`, then `git push`, **only if something changed**. It does not rebuild; run `./update.sh` first. The rebase avoids overwriting a concurrent daily publish. After a successful push it notifies IndexNow of changed page URLs; a failed ping prints a warning and does not fail the script. You can pass a commit message:
 
 ```bash
 ./publish.sh "Add 20 pin articles for 2026-11-11 and rebuild site"
@@ -159,6 +163,9 @@ After a build, quickly confirm:
 - Lifestyle images load, and the caption does not call them product photos.
 - The Associates disclosure appears on article pages and in the footer.
 - New board names automatically get a `/boards/<slug>/` page.
+- Article pages include visible breadcrumbs, BreadcrumbList JSON-LD, and a “More from this board” section.
+- `docs/CNAME` is `joehartmann.com` and every page still has the `p:domain_verify` meta tag.
+- `docs/<indexnow_key>.txt` is written when `indexnow_key` is set in `config.json`.
 
 ## Requirements
 

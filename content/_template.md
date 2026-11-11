@@ -3,7 +3,7 @@ id: PIN-ID-HERE
 slug: lowercase-kebab-product-name
 title: Use the pin title, or a close equivalent
 description: One- or two-sentence meta description. No price, no star rating, no review claims.
-image_alt: Lifestyle photo for mood and styling inspiration — not a photo of the product itself
+image_alt: Lifestyle photo for mood and styling inspiration — not a photo of PRODUCT NAME
 ---
 
 Opening paragraph (who this is, why it showed up on the boards, what kind of day it is for). Do not invent a story about using the exact product in the photo — the image is a lifestyle shot, not a product photo. Do not mention prices, star ratings, review counts, or testimonials.

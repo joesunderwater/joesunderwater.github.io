@@ -32,5 +32,19 @@ if [[ -z "$MSG" ]]; then
 fi
 
 git commit -m "$MSG"
+
+# Rebase onto remote main so a concurrent daily publish is not overwritten.
+if ! git pull --rebase origin main; then
+  echo "ERROR: git pull --rebase failed. The commit is local; not pushing." >&2
+  exit 1
+fi
+
 git push origin HEAD:main
 echo "Published to origin/main."
+
+# Notify IndexNow of page URLs in the commit just pushed. Never fail the publish.
+if python3 scripts/indexnow_ping.py; then
+  :
+else
+  echo "WARNING: IndexNow ping failed; the site was still published." >&2
+fi

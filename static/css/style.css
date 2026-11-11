@@ -161,8 +161,25 @@ p { margin: 0 0 1em; }
 /* Article */
 .article-hero { padding: 2rem 0 0; }
 .crumbs { font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; }
+.crumbs ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
+  margin: 0;
+  padding: 0;
+}
+.crumbs li { display: inline-flex; align-items: center; gap: 0.45rem; }
+.crumbs li:not(:last-child)::after { content: "/"; color: var(--muted); }
 .crumbs a { color: var(--muted); text-decoration: none; }
 .crumbs a:hover { color: var(--accent); }
+.crumbs [aria-current="page"] { color: var(--ink-soft); }
+.related {
+  padding: 0 0 3rem;
+  border-top: 1px solid var(--line);
+  margin-top: -1rem;
+}
+.related .section-head { margin-top: 1.6rem; }
 .article-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr);

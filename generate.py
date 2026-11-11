@@ -17,8 +17,13 @@ import sys
 from collections import defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from PIL import Image
+
+PACIFIC = ZoneInfo("America/Los_Angeles")
+OG_WIDE = (1200, 630)
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
@@ -41,6 +46,181 @@ def bp(cfg: dict, path: str) -> str:
 def abs_url(cfg: dict, path: str) -> str:
     path = bp(cfg, path)
     return f"{cfg['base_url']}{path}" if cfg["base_url"] else path
+
+
+def iso_datetime(day: str) -> str:
+    """YYYY-MM-DD -> ISO 8601 datetime at local midnight in America/Los_Angeles."""
+    try:
+        dt = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=PACIFIC)
+        return dt.isoformat()
+    except (ValueError, TypeError):
+        return day or ""
+
+
+def file_mtime_iso(path: str | Path | None) -> str:
+    if not path:
+        return ""
+    pth = Path(path)
+    if not pth.is_file():
+        return ""
+    return datetime.fromtimestamp(pth.stat().st_mtime, tz=PACIFIC).replace(microsecond=0).isoformat()
+
+
+def later_iso(*values: str) -> str:
+    parsed = []
+    for v in values:
+        if not v:
+            continue
+        try:
+            parsed.append(datetime.fromisoformat(v))
+        except ValueError:
+            continue
+    if not parsed:
+        return values[-1] if values else ""
+    return max(parsed).isoformat()
+
+
+def pinterest_profile_url(cfg: dict, items: list[dict] | None = None) -> str | None:
+    """Return the Pinterest profile URL from config or from a board_url. Never invent one."""
+    raw = (cfg.get("pinterest_profile") or "").strip()
+    if raw:
+        return raw.rstrip("/") + "/"
+    for item in items or []:
+        url = (item.get("board_url") or "").strip()
+        if not url:
+            continue
+        parsed = urlparse(url)
+        if "pinterest.com" not in (parsed.netloc or "").lower():
+            continue
+        parts = [part for part in parsed.path.split("/") if part]
+        if parts:
+            return f"{parsed.scheme or 'https'}://{parsed.netloc}/{parts[0]}/"
+    return None
+
+
+def org_id(cfg: dict) -> str:
+    return abs_url(cfg, "/") + "#organization"
+
+
+def site_id(cfg: dict) -> str:
+    return abs_url(cfg, "/") + "#website"
+
+
+def logo_url(cfg: dict) -> str:
+    return abs_url(cfg, "/images/logo.png")
+
+
+def organization_node(cfg: dict, same_as: list[str] | None = None) -> dict:
+    node = {
+        "@type": "Organization",
+        "@id": org_id(cfg),
+        "name": cfg["site_name"],
+        "url": abs_url(cfg, "/"),
+        "logo": {
+            "@type": "ImageObject",
+            "url": logo_url(cfg),
+            "width": 512,
+            "height": 512,
+        },
+    }
+    if same_as:
+        node["sameAs"] = same_as
+    return node
+
+
+def website_node(cfg: dict) -> dict:
+    return {
+        "@type": "WebSite",
+        "@id": site_id(cfg),
+        "name": cfg["site_name"],
+        "description": cfg.get("description") or cfg.get("tagline") or "",
+        "url": abs_url(cfg, "/"),
+        "inLanguage": cfg.get("language") or "en",
+        "publisher": {"@id": org_id(cfg)},
+    }
+
+
+def board_niche(items: list[dict]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for item in items:
+        niche = (item.get("niche") or "").strip()
+        if niche:
+            counts[niche] += 1
+    if not counts:
+        return ""
+    return max(counts.items(), key=lambda kv: kv[1])[0]
+
+
+def board_copy(name: str, items: list[dict]) -> tuple[str, str, str]:
+    """Unique title, meta description, and lede from real board data only."""
+    n = len(items)
+    niche = board_niche(items)
+    article_word = "article" if n == 1 else "articles"
+    title = f"{name} – Amazon finds"
+    covering = f", covering {niche}" if niche else ""
+    desc = (
+        f"Amazon finds from the {name} Pinterest board{covering}. "
+        f"{n} short {article_word}, each with a link to the pin and a path to check the current price on Amazon."
+    )
+    lede = (
+        f"{desc} Browse the board on Pinterest, or open an article to read more. "
+        "Lifestyle photos on these pages set the mood — they are not pictures of the products themselves."
+    )
+    return title, desc, lede
+
+
+def crumbs_html(cfg: dict, trail: list[tuple[str, str | None]]) -> str:
+    """Visible breadcrumb nav. The last item is the current page (no link) if path is None or is the current page."""
+    parts = []
+    last_i = len(trail) - 1
+    for i, (label, path) in enumerate(trail):
+        text = html.escape(label)
+        is_last = i == last_i
+        if is_last or not path:
+            parts.append(f'<li><span aria-current="page">{text}</span></li>')
+        else:
+            parts.append(f'<li><a href="{html.escape(bp(cfg, path))}">{text}</a></li>')
+    return (
+        '<nav class="crumbs" aria-label="Breadcrumb"><ol>'
+        + "".join(parts)
+        + "</ol></nav>"
+    )
+
+
+def breadcrumb_list(cfg: dict, trail: list[tuple[str, str]]) -> dict:
+    elements = []
+    for i, (label, path) in enumerate(trail, start=1):
+        elements.append({
+            "@type": "ListItem",
+            "position": i,
+            "name": label,
+            "item": abs_url(cfg, path),
+        })
+    return {
+        "@type": "BreadcrumbList",
+        "itemListElement": elements,
+    }
+
+
+def cover_crop(im: Image.Image, tw: int, th: int) -> Image.Image:
+    w, h = im.size
+    if w == 0 or h == 0:
+        return im
+    scale = max(tw / w, th / h)
+    nw, nh = max(tw, int(round(w * scale))), max(th, int(round(h * scale)))
+    resized = im.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = max(0, (nw - tw) // 2)
+    top = max(0, (nh - th) // 2)
+    return resized.crop((left, top, left + tw, top + th))
+
+
+def write_og_crop(src: Path, dest: Path, size: tuple[int, int] = OG_WIDE) -> dict:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tw, th = size
+    with Image.open(src) as im:
+        cropped = cover_crop(im.convert("RGB"), tw, th)
+        cropped.save(dest, "JPEG", quality=86, optimize=True)
+    return {"jpg": dest.name, "width": tw, "height": th}
 
 
 def slugify(text: str) -> str:
@@ -209,28 +389,42 @@ def process_image(src: Path, dest_stem: Path) -> dict:
     return {"webp": webp.name, "jpg": jpeg.name, "width": w, "height": h}
 
 
-def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=None, extra_head=""):
+def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=None, extra_head="", html_title=None):
     site = html.escape(cfg["site_name"])
-    full_title = f"{title} · {cfg['site_name']}" if title != cfg["site_name"] else cfg["site_name"]
+    if html_title:
+        full_title = html_title
+    elif title != cfg["site_name"]:
+        full_title = f"{title} · {cfg['site_name']}"
+    else:
+        full_title = cfg.get("home_title") or cfg["site_name"]
     desc = html.escape(description or cfg.get("description") or "")
     canonical = abs_url(cfg, canonical_path)
     og = og or {}
     og_title = html.escape(og.get("title") or title)
     og_desc = html.escape(og.get("description") or description or "")
-    og_image = og.get("image") or abs_url(cfg, cfg.get("og_image_fallback") or "/images/og-default.jpg")
+    og_fallback = cfg.get("og_image_wide") or cfg.get("og_image_fallback") or "/images/og-default-wide.jpg"
+    og_image = og.get("image") or abs_url(cfg, og_fallback)
     og_type = og.get("type") or "website"
-    og_w = og.get("width") or 1000
-    og_h = og.get("height") or 1500
+    og_w = og.get("width") or 1200
+    og_h = og.get("height") or 630
     published = og.get("published_time") or ""
+    modified = og.get("modified_time") or ""
+    section = og.get("section") or ""
     css = bp(cfg, "/css/style.css")
     home = bp(cfg, "/")
     about = bp(cfg, "/about/")
     disclosure = bp(cfg, "/disclosure/")
     feed = bp(cfg, "/feed.xml")
     favicon = bp(cfg, "/favicon.svg")
-    article_time = ""
+    favicon_png = bp(cfg, "/favicon-192.png")
+    article_meta = []
     if published:
-        article_time = f'<meta property="article:published_time" content="{html.escape(published)}">'
+        article_meta.append(f'<meta property="article:published_time" content="{html.escape(published)}">')
+    if modified:
+        article_meta.append(f'<meta property="article:modified_time" content="{html.escape(modified)}">')
+    if section:
+        article_meta.append(f'<meta property="article:section" content="{html.escape(section)}">')
+    article_time = "\n  ".join(article_meta)
     jsonld_html = ""
     if jsonld:
         jsonld_html = (
@@ -249,6 +443,8 @@ def page_shell(cfg, title, description, canonical_path, body, og=None, jsonld=No
   <meta name="description" content="{desc}">
   <link rel="canonical" href="{html.escape(canonical)}">
   <link rel="icon" href="{favicon}" type="image/svg+xml">
+  <link rel="icon" href="{favicon_png}" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="{favicon_png}">
   <link rel="alternate" type="application/rss+xml" title="{site} RSS" href="{feed}">
   <meta property="og:type" content="{html.escape(og_type)}">
   <meta property="og:site_name" content="{site}">
@@ -365,10 +561,18 @@ def build_article_list(cfg, pins, articles, out_images: Path) -> list[dict]:
             continue
         # Cache-bust by source mtime + id
         dest = process_image(src_image, out_images / pin_id)
+        og = write_og_crop(src_image, out_images / f"{pin_id}-og.jpg")
         excerpt = meta.get("description") or first_paragraph(meta["body"]) or pin.get("description", "").split("\n")[0]
-        image_alt = meta.get("image_alt") or (
-            "Lifestyle photo for mood and styling inspiration — not a photo of the product itself"
-        )
+        generic_alt = "Lifestyle photo for mood and styling inspiration — not a photo of the product itself"
+        product = pin.get("product_name") or title
+        image_alt = (meta.get("image_alt") or "").strip()
+        if not image_alt or image_alt == generic_alt:
+            image_alt = (
+                f"Lifestyle photo for mood and styling inspiration — not a photo of {product}"
+            )
+        published = pin.get("date_posted") or ""
+        published_iso = iso_datetime(published) if published else ""
+        modified_iso = later_iso(published_iso, file_mtime_iso(meta.get("_path")))
         item = {
             **pin,
             "title": title,
@@ -380,20 +584,27 @@ def build_article_list(cfg, pins, articles, out_images: Path) -> list[dict]:
             "image_jpg": dest["jpg"],
             "image_w": dest["width"],
             "image_h": dest["height"],
+            "og_image": og["jpg"],
+            "og_w": og["width"],
+            "og_h": og["height"],
             "board_slug": board_slug(pin["board"]),
             "faqs": extract_faq(meta["body"]),
+            "date_published_iso": published_iso,
+            "date_modified_iso": modified_iso,
         }
         built.append(item)
     built.sort(key=lambda a: (a.get("date_posted") or "", a["id"]), reverse=True)
     return built, missing
 
 
-def render_home(cfg, arts, boards):
+def render_home(cfg, arts, boards, same_as):
     pills = []
     for name, items in boards:
         href = bp(cfg, f"/boards/{board_slug(name)}/")
         pills.append(f'<a class="pill" href="{href}">{html.escape(name)} <span class="count">{len(items)}</span></a>')
     cards = "\n".join(card_html(cfg, a) for a in arts)
+    home_title = cfg.get("home_title") or f"{cfg['site_name']} – Amazon picks from Pinterest boards"
+    desc = cfg.get("description") or ""
     body = f"""
     <section class="hero">
       <div class="wrap">
@@ -410,23 +621,39 @@ def render_home(cfg, arts, boards):
     """
     jsonld = {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": cfg["site_name"],
-        "description": cfg.get("description"),
-        "url": abs_url(cfg, "/"),
+        "@graph": [
+            organization_node(cfg, same_as),
+            website_node(cfg),
+        ],
     }
-    return page_shell(cfg, cfg["site_name"], cfg.get("description"), "/", body, jsonld=jsonld)
+    return page_shell(
+        cfg,
+        cfg["site_name"],
+        desc,
+        "/",
+        body,
+        og={
+            "type": "website",
+            "title": home_title,
+            "description": desc,
+        },
+        jsonld=jsonld,
+        html_title=home_title,
+    )
 
 
-def render_board(cfg, name, items, url):
+def render_board(cfg, name, items, url, same_as):
     cards = "\n".join(card_html(cfg, a) for a in items)
-    desc = f"Amazon finds from the {name} Pinterest board, each with a short article and a link to shop."
+    title, desc, lede = board_copy(name, items)
+    board_path = f"/boards/{board_slug(name)}/"
+    crumbs = crumbs_html(cfg, [("Home", "/"), (name, None)])
     body = f"""
+    <div class="wrap article-hero">{crumbs}</div>
     <section class="hero">
       <div class="wrap">
         <p class="kicker">Board</p>
         <h1>{html.escape(name)}</h1>
-        <p class="lede">{html.escape(desc)} Browse the board on Pinterest, or open an article to read more and check the current price on Amazon.</p>
+        <p class="lede">{html.escape(lede)}</p>
         <div class="cta-row">
           <a class="btn btn-pin" href="{html.escape(items[0]['board_url'])}" rel="noopener" target="_blank">Open the {html.escape(name)} board</a>
         </div>
@@ -436,10 +663,46 @@ def render_board(cfg, name, items, url):
       <div class="grid">{cards}</div>
     </div>
     """
-    return page_shell(cfg, name, desc, f"/boards/{board_slug(name)}/", body, og={"type": "website"})
+    item_list = {
+        "@type": "ItemList",
+        "numberOfItems": len(items),
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i,
+                "url": abs_url(cfg, f"/articles/{art['slug']}/"),
+                "name": art["title"],
+            }
+            for i, art in enumerate(items, start=1)
+        ],
+    }
+    jsonld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            organization_node(cfg, same_as),
+            {
+                "@type": "CollectionPage",
+                "name": title,
+                "description": desc,
+                "url": abs_url(cfg, board_path),
+                "isPartOf": {"@id": site_id(cfg)},
+                "breadcrumb": breadcrumb_list(cfg, [("Home", "/"), (name, board_path)]),
+                "mainEntity": item_list,
+            },
+        ],
+    }
+    return page_shell(
+        cfg,
+        title,
+        desc,
+        board_path,
+        body,
+        og={"type": "website", "title": title, "description": desc},
+        jsonld=jsonld,
+    )
 
 
-def render_article(cfg, art):
+def render_article(cfg, art, related, same_as):
     body_html = md_to_html(art["body"])
     # Insert a mid-article CTA before the FAQ heading if present.
     faq_split = re.split(r"(<h2>Quick FAQ</h2>)", body_html, maxsplit=1)
@@ -449,16 +712,29 @@ def render_article(cfg, art):
         prose = body_html + cta_block(cfg, art)
     prose += cta_block(cfg, art, leading=True)
     img = bp(cfg, f"/images/{art['image_webp']}")
-    og_img = abs_url(cfg, f"/images/{art['image_jpg']}")
+    og_img = abs_url(cfg, f"/images/{art['og_image']}")
     board_href = bp(cfg, f"/boards/{art['board_slug']}/")
+    article_path = f"/articles/{art['slug']}/"
     published = art.get("date_posted") or ""
-    # Prefer ISO date for display
+    published_iso = art.get("date_published_iso") or iso_datetime(published)
+    modified_iso = art.get("date_modified_iso") or published_iso
     display_date = published
     caption = html.escape(art["image_alt"])
+    crumbs = crumbs_html(cfg, [("Home", "/"), (art["board"], f"/boards/{art['board_slug']}/"), (art["title"], None)])
+    related_html = ""
+    if related:
+        cards = "\n".join(card_html(cfg, a) for a in related)
+        related_html = f"""
+    <section class="wrap related" aria-labelledby="related-heading">
+      <div class="section-head">
+        <h2 id="related-heading">More from {html.escape(art['board'])}</h2>
+        <p class="tiny"><a href="{board_href}">See the full board</a></p>
+      </div>
+      <div class="grid">{cards}</div>
+    </section>
+    """
     body = f"""
-    <div class="wrap article-hero">
-      <p class="crumbs"><a href="{bp(cfg,'/')}">Home</a> / <a href="{board_href}">{html.escape(art['board'])}</a></p>
-    </div>
+    <div class="wrap article-hero">{crumbs}</div>
     <article class="wrap article-layout">
       <figure class="article-photo">
         <img src="{img}" alt="{caption}" width="{art['image_w']}" height="{art['image_h']}">
@@ -472,64 +748,72 @@ def render_article(cfg, art):
         <div class="prose faq">{prose}</div>
       </div>
     </article>
+    {related_html}
     """
-    jsonld = {
-        "@context": "https://schema.org",
+    article_node = {
         "@type": "Article",
         "headline": art["title"],
         "description": art["excerpt"],
-        "datePublished": published,
-        "mainEntityOfPage": abs_url(cfg, f"/articles/{art['slug']}/"),
+        "datePublished": published_iso,
+        "dateModified": modified_iso,
+        "mainEntityOfPage": abs_url(cfg, article_path),
         "image": [og_img],
-        "author": {"@type": "Organization", "name": cfg["site_name"]},
-        "publisher": {"@type": "Organization", "name": cfg["site_name"]},
+        "author": {
+            "@type": "Organization",
+            "name": cfg["site_name"],
+            "url": abs_url(cfg, "/about/"),
+        },
+        "publisher": {"@id": org_id(cfg)},
+        "articleSection": art["board"],
         "about": {"@type": "Product", "name": art["product_name"], "sku": art.get("asin")},
     }
+    graph = [
+        organization_node(cfg, same_as),
+        article_node,
+        breadcrumb_list(cfg, [
+            ("Home", "/"),
+            (art["board"], f"/boards/{art['board_slug']}/"),
+            (art["title"], article_path),
+        ]),
+    ]
     if art["faqs"]:
-        jsonld["mainEntity"] = {
+        graph.append({
             "@type": "FAQPage",
             "mainEntity": [
                 {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
                 for q, a in art["faqs"]
             ],
-        }
-        # FAQPage should be a separate graph node; keep it simple as additional type via @graph
-        jsonld = {
-            "@context": "https://schema.org",
-            "@graph": [
-                {k: v for k, v in jsonld.items() if k != "mainEntity"},
-                {
-                    "@type": "FAQPage",
-                    "mainEntity": [
-                        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
-                        for q, a in art["faqs"]
-                    ],
-                },
-            ],
-        }
+        })
+    jsonld = {"@context": "https://schema.org", "@graph": graph}
+    preload = f'<link rel="preload" as="image" href="{html.escape(img)}" type="image/webp">'
     return page_shell(
         cfg,
         art["title"],
         art["excerpt"][:300],
-        f"/articles/{art['slug']}/",
+        article_path,
         body,
         og={
             "type": "article",
             "title": art["title"],
             "description": art["excerpt"][:200],
             "image": og_img,
-            "width": art["image_w"],
-            "height": art["image_h"],
-            "published_time": published,
+            "width": art["og_w"],
+            "height": art["og_h"],
+            "published_time": published_iso,
+            "modified_time": modified_iso,
+            "section": art["board"],
         },
         jsonld=jsonld,
+        extra_head=preload,
     )
 
 
-def render_about(cfg, count, boards):
+def render_about(cfg, count, boards, same_as):
     board_list = ", ".join(html.escape(n) for n, _ in boards) or "new boards as they appear"
+    crumbs = crumbs_html(cfg, [("Home", "/"), ("About", None)])
     body = f"""
     <div class="wrap page">
+      {crumbs}
       <p class="kicker">About</p>
       <h1>Why {html.escape(cfg['site_name'])} exists</h1>
       <p>{html.escape(cfg['site_name'])} is a simple storefront for Amazon finds that first showed up as Pinterest pins. Each pin gets its own article: who the item is for, the features listed for that product, ideas for wearing or using it, and a clear path to check the current price on Amazon or save the pin.</p>
@@ -541,12 +825,34 @@ def render_about(cfg, count, boards):
       <p>There {('are ' + str(count) + ' articles') if count != 1 else 'is 1 article'} on the site right now. Start with the <a href="{bp(cfg,'/')}">latest finds</a>, or read the <a href="{bp(cfg,'/disclosure/')}">Privacy &amp; Disclosure</a> page for the full affiliate and privacy notes.</p>
     </div>
     """
-    return page_shell(cfg, "About", f"About {cfg['site_name']}, a Pinterest-inspired Amazon finds storefront.", "/about/", body)
+    jsonld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            organization_node(cfg, same_as),
+            {
+                "@type": "AboutPage",
+                "name": f"About {cfg['site_name']}",
+                "url": abs_url(cfg, "/about/"),
+                "isPartOf": {"@id": site_id(cfg)},
+                "breadcrumb": breadcrumb_list(cfg, [("Home", "/"), ("About", "/about/")]),
+            },
+        ],
+    }
+    return page_shell(
+        cfg,
+        "About",
+        f"About {cfg['site_name']}, a Pinterest-inspired Amazon finds storefront.",
+        "/about/",
+        body,
+        jsonld=jsonld,
+    )
 
 
-def render_disclosure(cfg):
+def render_disclosure(cfg, same_as):
+    crumbs = crumbs_html(cfg, [("Home", "/"), ("Privacy & Disclosure", None)])
     body = f"""
     <div class="wrap page">
+      {crumbs}
       <p class="kicker">Legal</p>
       <h1>Privacy &amp; Disclosure</h1>
       <h2>Amazon Associates disclosure</h2>
@@ -564,12 +870,26 @@ def render_disclosure(cfg):
       <p>Product features in the articles are based on publicly listed product information at the time of writing. Listings can change. We do not invent specifications, ratings, reviews, or testimonials, and we do not guarantee that a product will meet your needs. Check the live Amazon page for the latest details.</p>
     </div>
     """
+    jsonld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            organization_node(cfg, same_as),
+            {
+                "@type": "WebPage",
+                "name": "Privacy & Disclosure",
+                "url": abs_url(cfg, "/disclosure/"),
+                "isPartOf": {"@id": site_id(cfg)},
+                "breadcrumb": breadcrumb_list(cfg, [("Home", "/"), ("Privacy & Disclosure", "/disclosure/")]),
+            },
+        ],
+    }
     return page_shell(
         cfg,
         "Privacy & Disclosure",
         f"Amazon Associates disclosure and privacy notes for {cfg['site_name']}.",
         "/disclosure/",
         body,
+        jsonld=jsonld,
     )
 
 
@@ -578,21 +898,42 @@ def write_robots(cfg, dest: Path):
     dest.write_text(f"User-agent: *\nAllow: /\nSitemap: {sitemap}\n", encoding="utf-8")
 
 
+def lastmod_day(value: str) -> str:
+    """Reduce an ISO datetime or YYYY-MM-DD value to a sitemap lastmod date."""
+    if not value:
+        return ""
+    return value[:10]
+
+
 def write_sitemap(cfg, arts, dest: Path):
-    urls = [("/", "weekly", "1.0"), ("/about/", "monthly", "0.5"), ("/disclosure/", "monthly", "0.4")]
+    latest = ""
+    board_latest = {}
+    for a in arts:
+        day = lastmod_day(a.get("date_modified_iso") or a.get("date_published_iso") or a.get("date_posted") or "")
+        if day and day > latest:
+            latest = day
+        slug = a["board_slug"]
+        if day and day > board_latest.get(slug, ""):
+            board_latest[slug] = day
+    urls = [
+        ("/", "weekly", "1.0", latest),
+        ("/about/", "monthly", "0.5", latest),
+        ("/disclosure/", "monthly", "0.4", latest),
+    ]
     seen_boards = set()
     for a in arts:
         if a["board_slug"] not in seen_boards:
-            urls.append((f"/boards/{a['board_slug']}/", "weekly", "0.7"))
+            urls.append((f"/boards/{a['board_slug']}/", "weekly", "0.7", board_latest.get(a["board_slug"], latest)))
             seen_boards.add(a["board_slug"])
-        urls.append((f"/articles/{a['slug']}/", "monthly", "0.8"))
+        art_day = lastmod_day(a.get("date_modified_iso") or a.get("date_published_iso") or a.get("date_posted") or latest)
+        urls.append((f"/articles/{a['slug']}/", "monthly", "0.8", art_day))
     chunks = []
-    today = date.today().isoformat()
-    for path, freq, pri in urls:
+    for path, freq, pri, lastmod in urls:
+        lastmod_xml = f"<lastmod>{html.escape(lastmod)}</lastmod>" if lastmod else ""
         chunks.append(
             f"  <url><loc>{html.escape(abs_url(cfg, path))}</loc>"
             f"<changefreq>{freq}</changefreq><priority>{pri}</priority>"
-            f"<lastmod>{today}</lastmod></url>"
+            f"{lastmod_xml}</url>"
         )
     dest.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -649,6 +990,44 @@ def write_favicon(dest: Path, name: str):
     )
 
 
+def write_lettermark_png(dest: Path, name: str, size: int):
+    """Raster of the same lettermark used for the SVG favicon."""
+    from PIL import ImageDraw, ImageFont
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    letter = (name or "J")[0].upper()
+    im = Image.new("RGB", (size, size), "#b44528")
+    draw = ImageDraw.Draw(im)
+    # Prefer a serif-like face if the box has one; otherwise the default bitmap font.
+    font = None
+    for path in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf",
+    ):
+        if Path(path).is_file():
+            font = ImageFont.truetype(path, size=int(size * 0.58))
+            break
+    if font is None:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), letter, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (size - tw) / 2 - bbox[0]
+    y = (size - th) / 2 - bbox[1]
+    draw.text((x, y), letter, font=font, fill="#fffcf7")
+    im.save(dest, "PNG", optimize=True)
+
+
+def write_indexnow_key(cfg: dict, dest_dir: Path):
+    key = (cfg.get("indexnow_key") or "").strip()
+    if not key:
+        return
+    if not re.fullmatch(r"[A-Za-z0-9-]{8,128}", key):
+        print(f"WARNING: ignoring invalid indexnow_key", flush=True)
+        return
+    (dest_dir / f"{key}.txt").write_text(key + "\n", encoding="utf-8")
+
+
 def main() -> int:
     cfg = load_config()
     pins_path = Path(cfg["pins_json"])
@@ -665,9 +1044,14 @@ def main() -> int:
 
     shutil.copy2(ROOT / "static" / "css" / "style.css", out_css / "style.css")
     write_favicon(out / "favicon.svg", cfg["site_name"])
+    write_lettermark_png(out / "favicon-48.png", cfg["site_name"], 48)
+    write_lettermark_png(out / "favicon-192.png", cfg["site_name"], 192)
+    write_lettermark_png(out_images / "logo.png", cfg["site_name"], 512)
     og_src = ROOT / "static" / "img" / "og-default.jpg"
     if og_src.is_file():
         shutil.copy2(og_src, out_images / "og-default.jpg")
+        write_og_crop(og_src, out_images / "og-default-wide.jpg")
+    write_indexnow_key(cfg, out)
 
     pins = load_pins(pins_path)
     articles = load_articles(content_dir)
@@ -682,29 +1066,33 @@ def main() -> int:
         boards_map[a["board"]].append(a)
     boards = sorted(boards_map.items(), key=lambda kv: kv[0].lower())
 
+    profile = pinterest_profile_url(cfg, built or pins)
+    same_as = [profile] if profile else []
+
     # Home
-    (out / "index.html").write_text(render_home(cfg, built, boards), encoding="utf-8")
+    (out / "index.html").write_text(render_home(cfg, built, boards, same_as), encoding="utf-8")
 
     # About + disclosure
     about_dir = out / "about"
     about_dir.mkdir(exist_ok=True)
-    (about_dir / "index.html").write_text(render_about(cfg, len(built), boards), encoding="utf-8")
+    (about_dir / "index.html").write_text(render_about(cfg, len(built), boards, same_as), encoding="utf-8")
     disc_dir = out / "disclosure"
     disc_dir.mkdir(exist_ok=True)
-    (disc_dir / "index.html").write_text(render_disclosure(cfg), encoding="utf-8")
+    (disc_dir / "index.html").write_text(render_disclosure(cfg, same_as), encoding="utf-8")
 
     # Boards
     for name, items in boards:
         bdir = out / "boards" / board_slug(name)
         bdir.mkdir(parents=True, exist_ok=True)
-        (bdir / "index.html").write_text(render_board(cfg, name, items, items[0]["board_url"]), encoding="utf-8")
+        (bdir / "index.html").write_text(render_board(cfg, name, items, items[0]["board_url"], same_as), encoding="utf-8")
 
     # Articles
     # Clean removed slugs? Keep it simple: write current ones; leftover old pages can remain.
     for art in built:
+        related = [other for other in boards_map[art["board"]] if other["id"] != art["id"]][:4]
         adir = out / "articles" / art["slug"]
         adir.mkdir(parents=True, exist_ok=True)
-        (adir / "index.html").write_text(render_article(cfg, art), encoding="utf-8")
+        (adir / "index.html").write_text(render_article(cfg, art, related, same_as), encoding="utf-8")
 
     write_robots(cfg, out / "robots.txt")
     write_sitemap(cfg, built, out / "sitemap.xml")
@@ -713,6 +1101,7 @@ def main() -> int:
     # A tiny .nojekyll so GitHub Pages does not run Jekyll on docs/
     (out / ".nojekyll").write_text("", encoding="utf-8")
     (out / "CNAME").write_text("joehartmann.com\n", encoding="utf-8")
+
 
     print(f"Built {len(built)} article(s), {len(boards)} board page(s) → {out}")
     if missing:
