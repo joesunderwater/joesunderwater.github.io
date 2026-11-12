@@ -531,7 +531,10 @@ def card_html(cfg, art) -> str:
 
 def cta_block(cfg, art, leading=True) -> str:
     aff = html.escape(art["affiliate_link"], quote=True)
-    pin = html.escape(art["pin_url"], quote=True)
+    pin_raw = (art.get("pin_url") or "").strip()
+    pin = html.escape(pin_raw, quote=True)
+    pin_btn = (f'<a class="btn btn-pin" href="{pin}" rel="noopener" target="_blank">Save it on Pinterest</a>'
+               if pin_raw.startswith("http") else "")
     board = html.escape(art["board_url"], quote=True)
     product = html.escape(art["product_name"])
     board_name = html.escape(art["board"])
@@ -540,7 +543,7 @@ def cta_block(cfg, art, leading=True) -> str:
     {lead}
     <div class="cta-row">
       <a class="btn btn-amazon" href="{aff}" rel="sponsored nofollow noopener" target="_blank">Check price on Amazon</a>
-      <a class="btn btn-pin" href="{pin}" rel="noopener" target="_blank">Save it on Pinterest</a>
+      {pin_btn}
       <a class="btn btn-ghost" href="{board}" rel="noopener" target="_blank">See the {board_name} board</a>
     </div>
     """
