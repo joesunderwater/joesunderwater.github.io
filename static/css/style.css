@@ -294,3 +294,5 @@ p { margin: 0 0 1em; }
   position: absolute; left: -999px; top: 0;
 }
 .skip:focus { left: 1rem; top: 1rem; background: #fff; padding: 0.4rem 0.7rem; z-index: 50; }
+
+.cta-top { margin: 0.75rem 0 1.25rem; }

@@ -710,12 +710,11 @@ def render_board(cfg, name, items, url, same_as):
 def render_article(cfg, art, related, same_as):
     body_html = md_to_html(art["body"])
     # Insert a mid-article CTA before the FAQ heading if present.
-    faq_split = re.split(r"(<h2>Quick FAQ</h2>)", body_html, maxsplit=1)
-    if len(faq_split) == 3:
-        prose = faq_split[0] + cta_block(cfg, art) + faq_split[1] + faq_split[2]
-    else:
-        prose = body_html + cta_block(cfg, art)
-    prose += cta_block(cfg, art, leading=True)
+    # Amazon button sits at the top (right under the disclosure); full CTA row at the end.
+    prose = body_html + cta_block(cfg, art, leading=True)
+    aff_top = html.escape(art["affiliate_link"], quote=True)
+    top_cta = (f'<div class="cta-row cta-top"><a class="btn btn-amazon" href="{aff_top}" '
+               f'rel="sponsored nofollow noopener" target="_blank">Check price on Amazon</a></div>')
     img = bp(cfg, f"/images/{art['image_webp']}")
     og_img = abs_url(cfg, f"/images/{art['og_image']}")
     board_href = bp(cfg, f"/boards/{art['board_slug']}/")
@@ -750,6 +749,7 @@ def render_article(cfg, art, related, same_as):
         <h1>{html.escape(art['title'])}</h1>
         <p class="article-meta">{html.escape(art['product_name'])} · Posted {html.escape(display_date)}</p>
         <p class="disclosure">{html.escape(cfg['disclosure'])}</p>
+        {top_cta}
         <div class="prose faq">{prose}</div>
       </div>
     </article>
