@@ -1,8 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://joehartmann.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority><lastmod>2026-11-14</lastmod></url>
-  <url><loc>https://joehartmann.com/about/</loc><changefreq>monthly</changefreq><priority>0.5</priority><lastmod>2026-11-14</lastmod></url>
-  <url><loc>https://joehartmann.com/disclosure/</loc><changefreq>monthly</changefreq><priority>0.4</priority><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://joehartmann.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/about/</loc><changefreq>monthly</changefreq><priority>0.5</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/disclosure/</loc><changefreq>monthly</changefreq><priority>0.4</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/boards/white-collar-electronics/</loc><changefreq>weekly</changefreq><priority>0.7</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/sony-bravia-theater-bar-9-soundbar/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/shure-mv7i-usb-c-smart-microphone/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/bose-soundlink-max-portable-speaker/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/amazon-kindle-scribe-colorsoft-32gb/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/apple-watch-series-11-gps-46mm-jet-black/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/dji-mic-2-wireless-microphone/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/apple-magsafe-charger-2-m/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/oral-b-io-series-8-electric-toothbrush/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/hyperice-hypervolt-go-2-massage-gun/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/jbl-charge-6-portable-speaker/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/marshall-emberton-iii-bluetooth-speaker-black-brass/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/fellow-stagg-ekg-pro-electric-kettle/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/elgato-stream-deck-mk2/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/apple-watch-ultra-3-gps-cellular-49mm/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/sonos-era-100-wireless-smart-speaker/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/amazon-kindle-scribe-32gb/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/dji-osmo-pocket-3-vlogging-camera/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/garmin-fenix-8-sapphire-51mm-dlc-titanium/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/theragun-mini-3rd-gen-massage-gun/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
+  <url><loc>https://joehartmann.com/articles/bose-quietcomfort-ultra-headphones-2nd-gen/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-15</lastmod></url>
   <url><loc>https://joehartmann.com/boards/tech-finds/</loc><changefreq>weekly</changefreq><priority>0.7</priority><lastmod>2026-11-14</lastmod></url>
   <url><loc>https://joehartmann.com/articles/amazon-echo-studio-smart-speaker-with-dolby-atmos/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-14</lastmod></url>
   <url><loc>https://joehartmann.com/articles/razer-huntsman-v3-pro-mini-60-esports-gaming-keyboard-white/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-14</lastmod></url>
@@ -66,7 +87,6 @@
   <url><loc>https://joehartmann.com/articles/voice-caddie-sc4-pro-golf-launch-monitor-3d-driving-range-simulator/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-12</lastmod></url>
   <url><loc>https://joehartmann.com/articles/rapsodo-mlm2pro-mobile-launch-monitor-golf-simulator/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-12</lastmod></url>
   <url><loc>https://joehartmann.com/articles/garmin-approach-r10-portable-golf-launch-monitor/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-12</lastmod></url>
-  <url><loc>https://joehartmann.com/boards/white-collar-electronics/</loc><changefreq>weekly</changefreq><priority>0.7</priority><lastmod>2026-11-11</lastmod></url>
   <url><loc>https://joehartmann.com/articles/logitech-mx-keys-s-wireless-keyboard-graphite/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-11</lastmod></url>
   <url><loc>https://joehartmann.com/articles/breville-bambino-plus-espresso-machine-brushed-stainless-steel/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-11</lastmod></url>
   <url><loc>https://joehartmann.com/articles/ember-temperature-control-smart-mug-2-10-oz-white/</loc><changefreq>monthly</changefreq><priority>0.8</priority><lastmod>2026-11-11</lastmod></url>
