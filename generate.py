@@ -214,6 +214,30 @@ def cover_crop(im: Image.Image, tw: int, th: int) -> Image.Image:
     return resized.crop((left, top, left + tw, top + th))
 
 
+MOOD_ALT_GENERIC = "Lifestyle photo for mood and styling inspiration — not a photo of the product itself"
+MOOD_ALT_PREFIX = "Lifestyle photo for mood and styling inspiration — not a photo of "
+# Used only when a pin has a usable clean_image_path (a product photo, no hook banner).
+# Existing articles have no clean_image_path, so they keep their mood-photo captions.
+PRODUCT_ALT_TEMPLATE = (
+    "Illustrative photo of {product}; check the Amazon listing for exact color and details"
+)
+
+
+def resolve_article_image(pin: dict) -> tuple[Path, bool]:
+    """Use pin["clean_image_path"] when that field is set and the file exists.
+
+    Otherwise fall back to pin["image_path"] (the Pinterest pin image, which may
+    include a text hook banner). Older pins have no clean_image_path, so their
+    published photos stay unchanged.
+    """
+    raw = (pin.get("clean_image_path") or "").strip()
+    if raw:
+        path = Path(raw)
+        if path.is_file():
+            return path, True
+    return Path(pin["image_path"]), False
+
+
 def write_og_crop(src: Path, dest: Path, size: tuple[int, int] = OG_WIDE) -> dict:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tw, th = size
@@ -560,21 +584,29 @@ def build_article_list(cfg, pins, articles, out_images: Path) -> list[dict]:
         meta = articles[pin_id]
         title = meta.get("title") or pin.get("title") or pin.get("product_name")
         slug = meta.get("slug") or slugify(pin.get("product_name") or title)
-        src_image = Path(pin["image_path"])
+        src_image, used_override = resolve_article_image(pin)
         if not src_image.is_file():
             print(f"WARNING: missing image for {pin_id}: {src_image}", file=sys.stderr)
             continue
+        if used_override:
+            print(f"Using clean_image_path for {pin_id}: {src_image}")
         # Cache-bust by source mtime + id
         dest = process_image(src_image, out_images / pin_id)
         og = write_og_crop(src_image, out_images / f"{pin_id}-og.jpg")
         excerpt = meta.get("description") or first_paragraph(meta["body"]) or pin.get("description", "").split("\n")[0]
-        generic_alt = "Lifestyle photo for mood and styling inspiration — not a photo of the product itself"
         product = pin.get("product_name") or title
         image_alt = (meta.get("image_alt") or "").strip()
-        if not image_alt or image_alt == generic_alt:
-            image_alt = (
-                f"Lifestyle photo for mood and styling inspiration — not a photo of {product}"
-            )
+        mood_default = f"{MOOD_ALT_PREFIX}{product}"
+        if used_override:
+            # New product photos only: replace blank or old mood-template alts.
+            # Custom captions already in front matter are left alone. Articles
+            # without a clean_image_path keep the existing mood-photo wording.
+            if (not image_alt or image_alt == MOOD_ALT_GENERIC
+                    or image_alt == mood_default
+                    or image_alt.startswith(MOOD_ALT_PREFIX)):
+                image_alt = PRODUCT_ALT_TEMPLATE.format(product=product)
+        elif not image_alt or image_alt == MOOD_ALT_GENERIC:
+            image_alt = mood_default
         published = pin.get("date_posted") or ""
         published_iso = iso_datetime(published) if published else ""
         modified_iso = later_iso(published_iso, file_mtime_iso(meta.get("_path")))
